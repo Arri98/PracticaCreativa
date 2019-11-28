@@ -55,91 +55,43 @@ if order == "crear":
 		logger.info("Creando Maquina"+maquina)
 		call(["qemu-img", "create", "-f", "qcow2","-b", "cdps-vm-base-pf1.qcow2",maquina+".qcow2"])
 		call(["cp","plantilla-vm-pf1.xml",maquina+".xml"])
-
 		#modificar ficheros de la maquina:
-
 		s = etree.parse('s'+str(y)+'.xml')
 		root= s.getroot()
 		name = root.find("name")
 		name.text = 's'+str(y)
-
 		x=root.find("./devices/disk/source")		
 		x.set("file", "/mnt/tmp/Pcreativa/s"+str(y)+".qcow2")
-
-
 		w=root.find("./devices/interface/source")
 		w.set("bridge", "LAN2")
-
 		s.write('s'+str(y)+'.xml')
-
 		#Crear y cambiar los ficheros
 		f= open("interfaces","w+")
-		f.write("auto lo\niface lo inet loopback \nauto eth0 \niface eth0 inet dhcp \nauto eth1 \niface eth1 inet static \n   address 192.168.122.241 \n   netmask 255.255.255.0 \n   gateway 192.168.122.1\n   dns-nameservers 192.168.122.1\n")
+		f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.2.1"+y+" \n   netmask 255.255.255.0 \n   gateway 10.0.2.1\n   dns-nameservers 192.168.122.1\n")
 		f.close()
-		f= open("hostname","w+")
-		f.write("127.0.0.1 localhost \n 127.0.0.2 l075.lab.dit.upm.es l075 \n 138.4.30.51 server \n # The following lines are desirable for IPv6 capable hosts \n ::1     ip6-localhost ip6-loopback\n fe00::0 ip6-localnet \n ff00::0 ip6-mcastprefix \n ff02::1 ip6-allnodes \n ff02::2 ip6-allrouters \n #CDPS LB \n 192.168.122.241 dominio1 www.dominio1.cdps \n 192.168.122.241 dominio2 www.dominio2.cdps \n")
-		f.close()
-
-
-	call(["sudo","virt-copy-in","-a",maquina+".qcow2","interfaces","/etc/network"])
-	call(["sudo","virt-copy-in","-a",maquina+".qcow2","hostname","/etc"])
+		call(["sudo","virsh","define",machine+".xml"])
+		call(["sudo","virt-copy-in","-a",maquina+".qcow2","interfaces","/etc/network"])
+		
 	#Crear balanceador
 	logger.info("Creando Balanceador")
 	call(["qemu-img", "create", "-f", "qcow2","-b", "cdps-vm-base-pf1.qcow2","lb.qcow2"])
 	call(["cp","plantilla-vm-pf1.xml","lb.xml"])
-
-
-	#Crear bridges
-        logger.info("Creando Brideges")
-	call(["sudo","brctl","addbr","LAN1"])
-	call(["sudo","brctl","addbr","LAN2"])
-	call(["sudo","ifconfig","LAN1","up"])
-	call(["sudo","ifconfig","LAN2","up"])
-
-
-	#Crear C1
-	logger.info("Creando C1")
-	call(["qemu-img", "create", "-f", "qcow2","-b", "cdps-vm-base-pf1.qcow2","c1.qcow2"])
-	call(["cp","plantilla-vm-pf1.xml","c1.xml"])
-
-	#modificar ficheros c1:
-
-	c1 = etree.parse('c1.xml')
-	root= c1.getroot()
-	name = root.find("name")
-	name.text = 'c1'
-
-	x=root.find("./devices/disk/source")
-	x.set("file", "/mnt/tmp/Pcreativa/c1.qcow2")
-
-	w=root.find("./devices/interface/source")
-	w.set("bridge", "LAN1")
-
-	c1.write('c1.xml')
-
-
 	#modificar ficheros lb:
-
+	f= open("interfaces","w+")
+	f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.1.1.1 \n   netmask 255.255.255.0 \n   gateway 10.0.1.1\n   dns-nameservers 192.168.122.1\nauto eth1  \niface eth1 inet static \n   address 10.0.1.2.1 \n   netmask 255.255.255.0 \n   gateway 10.0.2.1\n   dns-nameservers 192.168.122.1\n")
+	f.close()
 	lb = etree.parse('lb.xml')
-	#*print etree.tostring(lb, pretty_print=True)
 	root= lb.getroot()
-	#print(root.tag)
-	#print(root.get("tipo"))
-
-
 	name = root.find("name")
 	name.text = 'lb'
 	x=root.find("./devices/disk/source")
 	x.set("file", "/mnt/tmp/Pcreativa/lb.qcow2")
 	w=root.find("./devices/interface/source")
 	w.set("bridge", "LAN1")
-
-
 	u=root.find(".devices")
 	i=etree.Element("interface")
 	i.attrib['type']= 'bridge'
 	u.append(i)
-
 	h=root.findall("./devices/interface")
 	x=1
 	for u  in h:
@@ -150,9 +102,41 @@ if order == "crear":
 		x=x+1
 		u.append(jj)
 		u.append(ja)
-
 	lb.write('lb.xml')
+	call(["sudo","virsh","define","lb.xml"])
+	call(["sudo","virt-copy-in","-a","lb.qcow2","interfaces","/etc/network"])
 
+	#Crear C1
+	logger.info("Creando C1")
+	call(["qemu-img", "create", "-f", "qcow2","-b", "cdps-vm-base-pf1.qcow2","c1.qcow2"])
+	call(["cp","plantilla-vm-pf1.xml","c1.xml"])
+	f= open("interfaces","w+")
+	f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.1.3"+y+" \n   netmask 255.255.255.0 \n   gateway 10.0.1.1\n   dns-nameservers 192.168.122.1\n")
+	f.close()
+	f= open("interfaces","w+")
+	f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.1.1.1 \n   netmask 255.255.255.0 \n   gateway 10.0.1.1\n   dns-nameservers 192.168.122.1\nauto eth1  \niface eth1 inet static \n   address 10.0.1.2.1 \n   netmask 255.255.255.0 \n   gateway 10.0.2.1\n   dns-nameservers 192.168.122.1\n")
+	f.close()
+	#modificar ficheros c1:
+	c1 = etree.parse('c1.xml')
+	root= c1.getroot()
+	name = root.find("name")
+	name.text = 'c1'
+	x=root.find("./devices/disk/source")
+	x.set("file", "/mnt/tmp/Pcreativa/c1.qcow2")
+	w=root.find("./devices/interface/source")
+	w.set("bridge", "LAN1")
+	c1.write('c1.xml')
+	call(["sudo","virsh","define","c1.xml"])
+	call(["sudo","virt-copy-in","-a c1.qcow2","hostname","/etc"])
+	call(["sudo","virt-copy-in","-a","c1.qcow2","interfaces","/etc/network"])
+	
+
+	#Crear bridges
+    logger.info("Creando Brideges")
+	call(["sudo","brctl","addbr","LAN1"])
+	call(["sudo","brctl","addbr","LAN2"])
+	call(["sudo","ifconfig","LAN1","up"])
+	call(["sudo","ifconfig","LAN2","up"])
 
 else:
     #Recuperamos el numero de maquinas
@@ -170,18 +154,16 @@ else:
             y=x+1;
             machine="s"+str(y)
             logger.info("Arrancando maquina "+machine)
-            call(["sudo","virsh","define",machine+".xml"])
             call(["sudo","virsh","start",machine])
             Popen(["xterm","-rv","-sb","-rightbar","-fa","monospace","-fs", "10", "-title", machine, "-e","sudo virsh console "+machine])
         logger.info("Arrancando C1")
-        call(["sudo","virsh","define","c1.xml"])
         call(["sudo","virsh","start","c1"])
         Popen(["xterm","-rv","-sb","-rightbar","-fa","monospace","-fs", "10", "-title", "c1", "-e","sudo virsh console c1"])
 
         logger.info("Arrancando Lb")
-        call(["sudo","virsh","define","lb.xml"])
         call(["sudo","virsh","start","lb"])
         Popen(["xterm","-rv","-sb","-rightbar","-fa","monospace","-fs", "10", "-title", "lb", "-e","sudo virsh console lb"])
+		call(["sudo","virt-edit","-a","lb.qcow2","/etc/sysctl.conf", "\", "-e", "s/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/"])
 
     
     elif order == "parar":
@@ -208,20 +190,20 @@ else:
             call(["rm","-f","s"+str(y)+".xml"])
             
         logger.info("Borrando c1")
-	call(["sudo","virsh","destroy","c1"])
+		call(["sudo","virsh","destroy","c1"])
         call(["sudo","virsh","undefine","c1"])    
         call(["rm","-f","c1.qcow2"])
         call(["rm","-f","c1.xml"])   
         logger.info("Borrando lb")    
-	call(["sudo","virsh","destroy","lb"])
+		call(["sudo","virsh","destroy","lb"])
         call(["sudo","virsh","undefine","lb"])    
         call(["rm","-f","lb.xml"])      
         call(["rm","-f","lb.qcow2"])   
         logger.info("Borrando plantilla de configuracion") 
         call(["rm","-f","pf1.cfg"])   
         logger.info("Borrando hostname e interfaces") 
-	call(["rm","-f","hostname"])   
-	call(["rm","-f","interfaces"])   
+		call(["rm","-f","hostname"])   
+		call(["rm","-f","interfaces"])   
 
 
 #copia en remoto maquinas virtuales
