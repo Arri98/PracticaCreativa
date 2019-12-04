@@ -43,14 +43,16 @@ if order == "crear":
 		option= 5
 		logger.info("Cant create more than 5 machines")
 		logger.info("Creando Ficheros")
+
+	call(["mkdir","/mnt/tmp/Pcreativa"])
 	#Guardamos numero de maquinas 
-	f= open("pf1.cfg","w+")
+	f= open("/mnt/tmp/Pcreativa/pf1.cfg","w+")
 	f.write("num_serv="+str(option))
 	f.close() 
 	#Copiamos plantilla
-	call(["cp","cdps-vm-base-pf1.qcow2","base.qcow2"])
+	call(["cp","cdps-vm-base-pf1.qcow2","/mnt/tmp/Pcreativa/base.qcow2"])
 	#Crear bridges
-    	logger.info("Creando Bridges")
+	logger.info("Creando Bridges")
 	call(["sudo","brctl","addbr","LAN1"])
 	call(["sudo","brctl","addbr","LAN2"])
 	call(["sudo","ifconfig","LAN1","up"])
@@ -62,13 +64,13 @@ if order == "crear":
 		y = x+1
 		maquina="s"+str(y)
 		logger.info("Creando Maquina"+maquina)
-		call(["qemu-img", "create", "-f", "qcow2","-b", "base.qcow2",maquina+".qcow2"])
-		call(["cp","plantilla-vm-pf1.xml",maquina+".xml"])
+		call(["qemu-img", "create", "-f", "qcow2","-b", "/mnt/tmp/Pcreativa/base.qcow2","/mnt/tmp/Pcreativa/"+maquina+".qcow2"])
+		call(["cp","plantilla-vm-pf1.xml","/mnt/tmp/Pcreativa/"+maquina+".xml"])	
 		#modificar ficheros de la maquina:
-		f= open("hostname","w+")
+		f= open("/mnt/tmp/Pcreativa/hostname","w+")
 		f.write("127.0.1."+str(y)+" "+maquina)
 		f.close()
-		s = etree.parse('s'+str(y)+'.xml')
+		s = etree.parse('/mnt/tmp/Pcreativa/s'+str(y)+'.xml')
 		root= s.getroot()
 		name = root.find("name")
 		name.text = 's'+str(y)
@@ -78,25 +80,25 @@ if order == "crear":
 		w.set("bridge", "LAN2")
 		s.write('s'+str(y)+'.xml')
 		#Crear y cambiar los ficheros
-		f= open("interfaces","w+")
+		f= open("/mnt/tmp/Pcreativa/interfaces","w+")
 		f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.2.1"+str(y)+" \n   netmask 255.255.255.0 \n   gateway 10.0.2.1\n   dns-nameservers 192.168.122.1\n")
 		f.close()
 		call(["sudo","virsh","define",maquina+".xml"])
-		call(["sudo","virt-copy-in","-a",maquina+".qcow2","interfaces","/etc/network"])
-		call(["sudo","virt-copy-in","-a" ,maquina+".qcow2","hostname","/etc"])
+		call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/"+maquina+".qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
+		call(["sudo","virt-copy-in","-a" ,"/mnt/tmp/Pcreativa/"+maquina+".qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
 		
 	#Crear balanceador
 	logger.info("Creando Balanceador")
-	call(["qemu-img", "create", "-f", "qcow2","-b", "base.qcow2","lb.qcow2"])
-	call(["cp","plantilla-vm-pf1.xml","lb.xml"])
+	call(["qemu-img", "create", "-f", "qcow2","-b", "/mnt/tmp/Pcreativa/base.qcow2","/mnt/tmp/Pcreativa/lb.qcow2"])
+	call(["cp","/mnt/tmp/Pcreativa/plantilla-vm-pf1.xml","/mnt/tmp/Pcreativa/lb.xml"])
 	#modificar ficheros lb:
-	f= open("interfaces","w+")
+	f= open("/mnt/tmp/Pcreativa/interfaces","w+")
 	f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.1.1 \n   netmask 255.255.255.0 \n   gateway 10.0.1.1\n   dns-nameservers 192.168.122.1\nauto eth1  \niface eth1 inet static \n   address 10.0.2.1 \n   netmask 255.255.255.0 \n   gateway 10.0.2.1\n   dns-nameservers 192.168.122.1\n")
 	f.close()
-	f= open("hostname","w+")
+	f= open("/mnt/tmp/Pcreativa/hostname","w+")
 	f.write("127.0.1.6 lb")
 	f.close()
-	lb = etree.parse('lb.xml')
+	lb = etree.parse('/mnt/tmp/Pcreativa/lb.xml')
 	root= lb.getroot()
 	name = root.find("name")
 	name.text = 'lb'
@@ -120,22 +122,22 @@ if order == "crear":
 		u.append(ja)
 	lb.write('lb.xml')
 	call(["sudo","virsh","define","lb.xml"])
-	call(["sudo","virt-copy-in","-a","lb.qcow2","interfaces","/etc/network"])
-	call(["sudo","virt-copy-in","-a", "lb.qcow2","hostname","/etc"])
+	call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/lb.qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
+	call(["sudo","virt-copy-in","-a", "/mnt/tmp/Pcreativa/lb.qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
 	call(["sudo","virt-edit","-a","lb.qcow2","/etc/sysctl.conf","-e", "s/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/"])
 
 	#Crear C1
 	logger.info("Creando C1")
-	call(["qemu-img", "create", "-f", "qcow2","-b", "base.qcow2","c1.qcow2"])
-	call(["cp","plantilla-vm-pf1.xml","c1.xml"])
-	f= open("hostname","w+")
+	call(["qemu-img", "create", "-f", "qcow2","-b", "/mnt/tmp/Pcreativa/base.qcow2","/mnt/tmp/Pcreativa/c1.qcow2"])
+	call(["cp","/mnt/tmp/Pcreativa/plantilla-vm-pf1.xml","/mnt/tmp/Pcreativa/c1.xml"])
+	f= open("/mnt/tmp/Pcreativa/hostname","w+")
 	f.write("127.0.1.6 c1")
 	f.close()
-	f= open("interfaces","w+")
+	f= open("/mnt/tmp/Pcreativa/interfaces","w+")
 	f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.1.2 \n   netmask 255.255.255.0 \n   gateway 10.0.1.1\n   dns-nameservers 192.168.122.1")
 	f.close()
 	#modificar ficheros c1:
-	c1 = etree.parse('c1.xml')
+	c1 = etree.parse('/mnt/tmp/Pcreativa/c1.xml')
 	root= c1.getroot()
 	name = root.find("name")
 	name.text = 'c1'
@@ -145,21 +147,21 @@ if order == "crear":
 	w.set("bridge", "LAN1")
 	c1.write('c1.xml')
 	call(["sudo","virsh","define","c1.xml"])
-	call(["sudo","virt-copy-in","-a", "c1.qcow2","hostname","/etc"])
-	call(["sudo","virt-copy-in","-a","c1.qcow2","interfaces","/etc/network"])
+	call(["sudo","virt-copy-in","-a", "/mnt/tmp/Pcreativa/c1.qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
+	call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/c1.qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
 
 	#Crear HOST
 	logger.info("Creando Host")
-	call(["qemu-img", "create", "-f", "qcow2","-b", "base.qcow2","host.qcow2"])
-	call(["cp","plantilla-vm-pf1.xml","host.xml"])
-	f= open("hostname","w+")
+	call(["qemu-img", "create", "-f", "qcow2","-b", "/mnt/tmp/Pcreativa/base.qcow2","/mnt/tmp/Pcreativa/host.qcow2"])
+	call(["cp","/mnt/tmp/Pcreativa/plantilla-vm-pf1.xml","/mnt/tmp/Pcreativa/host.xml"])
+	f= open("/mnt/tmp/Pcreativa/hostname","w+")
 	f.write("127.0.1.7 host")
 	f.close()
-	f= open("interfaces","w+")
+	f= open("/mnt/tmp/Pcreativa/interfaces","w+")
 	f.write("auto lo\niface lo inet loopback \nauto eth0  \niface eth0 inet static \n   address 10.0.1.3 \n   netmask 255.255.255.0 \n   gateway 10.0.1.1\n   dns-nameservers 192.168.122.1")
 	f.close()
 	#modificar ficheros HOST:
-	host = etree.parse('host.xml')
+	host = etree.parse('/mnt/tmp/Pcreativa/host.xml')
 	root= host.getroot()
 	name = root.find("name")
 	name.text = 'host'
@@ -169,8 +171,8 @@ if order == "crear":
 	w.set("bridge", "LAN1")
 	host.write('host.xml')
 	call(["sudo","virsh","define","host.xml"])
-	call(["sudo","virt-copy-in","-a", "host.qcow2","hostname","/etc"])
-	call(["sudo","virt-copy-in","-a","host.qcow2","interfaces","/etc/network"])
+	call(["sudo","virt-copy-in","-a", "/mnt/tmp/Pcreativa/host.qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
+	call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/host.qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
 
 
 elif order == "pararsolo":
