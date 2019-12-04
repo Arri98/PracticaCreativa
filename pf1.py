@@ -121,7 +121,7 @@ if order == "crear":
 		u.append(jj)
 		u.append(ja)
 	lb.write('/mnt/tmp/Pcreativa/lb.xml')
-	call(["sudo","virsh","define","lb.xml"])
+	call(["sudo","virsh","define","/mnt/tmp/Pcreativa/lb.xml"])
 	call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/lb.qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
 	call(["sudo","virt-copy-in","-a", "/mnt/tmp/Pcreativa/lb.qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
 	call(["sudo","virt-edit","-a","/mnt/tmp/Pcreativa/lb.qcow2","/etc/sysctl.conf","-e", "s/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/"])
@@ -146,7 +146,7 @@ if order == "crear":
 	w=root.find("./devices/interface/source")
 	w.set("bridge", "LAN1")
 	c1.write('/mnt/tmp/Pcreativa/c1.xml')
-	call(["sudo","virsh","define","c1.xml"])
+	call(["sudo","virsh","define","/mnt/tmp/Pcreativa/c1.xml"])
 	call(["sudo","virt-copy-in","-a", "/mnt/tmp/Pcreativa/c1.qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
 	call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/c1.qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
 
@@ -170,7 +170,7 @@ if order == "crear":
 	w=root.find("./devices/interface/source")
 	w.set("bridge", "LAN1")
 	host.write('/mnt/tmp/Pcreativa/host.xml')
-	call(["sudo","virsh","define","host.xml"])
+	call(["sudo","virsh","define","/mnt/tmp/Pcreativa/host.xml"])
 	call(["sudo","virt-copy-in","-a", "/mnt/tmp/Pcreativa/host.qcow2","/mnt/tmp/Pcreativa/hostname","/etc"])
 	call(["sudo","virt-copy-in","-a","/mnt/tmp/Pcreativa/host.qcow2","/mnt/tmp/Pcreativa/interfaces","/etc/network"])
 
